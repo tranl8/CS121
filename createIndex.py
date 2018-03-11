@@ -99,9 +99,9 @@ def export_to_mongo():
     print diclen
     for term, count in index.iteritems():
         doclen = len(index[term])
-        idf = math.log(diclen/doclen,10)
+        idf =  1 + math.log(diclen/doclen,10)
         for id in count:
-            rank = round( 1 + id[2] * idf,5)
+            rank = round(id[2] * idf,5)
             # id[1] = idf
             id[2] = rank
         db_terms.insert({
