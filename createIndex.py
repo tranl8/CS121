@@ -18,7 +18,8 @@ db_bookkeeping = client['SearchEngine']['bookkeeping']
 corpus_files = {}
 docid = {}
 numdoc = []
-index = defaultdict(list)
+l = {}
+id_length = {}
 
 stop_words = set(stopwords.words("english"))
 
@@ -55,7 +56,7 @@ def readFile():
 def term_tokenize():
     global numdoc
     count = 0
-    for file in corpus_files:
+    for file in range(500):
         termdictPage ={}
         # f = io.open(corpus_files[file], 'r')
         f = io.open(corpus_files[file], 'r', encoding='utf-8')
@@ -66,7 +67,7 @@ def term_tokenize():
         if (bool(BeautifulSoup(document,"html.parser").find())):
             numdoc.append(1)
             soup = BeautifulSoup(document, 'html.parser')
-            [s.extract() for s in soup(['style', 'script', '[document]', 'head'])]
+            [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title'])]
             visible_text = soup.getText()
 
             print corpus_files[file]
@@ -76,16 +77,22 @@ def term_tokenize():
             filtered_term = [lmtzr.lemmatize(w).lower() for w in terms if not w in stop_words]
             id = docid[count]  # Doc id (FOLDER\\ID)
             id = id.replace('\\', '/')
-            numte = len(filtered_term)
+
+
             for term in filtered_term:
                 term_count =  filtered_term.count(term)
-                weight_term_frequency = 1 + math.log(term_count,10)
+                weight_term_frequency = term_count / len(filtered_term)
                 termdictPage[term] = [id, term_count,weight_term_frequency]
+
+
+
+
             for termpage, postingpage in termdictPage.iteritems():
                 index[termpage].append(postingpage)
         else:
             print("none")
         count = count + 1
+    print l
 
 def export_to_mongo():
     diclen = len(numdoc)
@@ -94,11 +101,13 @@ def export_to_mongo():
         doclen = len(index[term])
         idf = math.log(diclen/doclen,10)
         for id in count:
-            rank = round(id[2] * idf,5)
+            rank = round( 1 + id[2] * idf,5)
+            # id[1] = idf
             id[2] = rank
         db_terms.insert({
                         'term': term,
-                        'found in': count})
+                        'found in': count,
+                        'idf': idf})
 
         # for id in count:
         #
