@@ -82,7 +82,8 @@ def term_tokenize():
             for term in filtered_term:
                 term_count =  filtered_term.count(term)
                 weight_term_frequency = term_count / len(filtered_term)
-                termdictPage[term] = [id, term_count,weight_term_frequency]
+                print weight_term_frequency
+                termdictPage[term] = [id,weight_term_frequency, term_count]
 
 
 
@@ -99,9 +100,9 @@ def export_to_mongo():
     print diclen
     for term, count in index.iteritems():
         doclen = len(index[term])
-        idf =  1 + math.log(diclen/doclen,10)
+        idf = 1 + math.log(diclen/doclen,10)
         for id in count:
-            rank = round(id[2] * idf,5)
+            rank = round(id[1] * idf,5)
             # id[1] = idf
             id[2] = rank
         db_terms.insert({
