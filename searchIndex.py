@@ -3,6 +3,9 @@ from pymongo import MongoClient
 from nltk.tokenize import word_tokenize
 from collections import defaultdict
 import re, math
+from pprint import pprint
+import operator
+
 
 client = MongoClient()
 db_terms = client['SearchEngine']['terms']
@@ -21,79 +24,74 @@ def dot_product(lista, listb):
         result += lista[i] * listb[i]
     return result
 
-search = lmtzr.lemmatize(raw_input("What would you like to search?")).lower()
-print(search)
-search = search.lower()
-search = re.sub(r'[^a-zA-Z]', " ", search)
-terms = word_tokenize(search)
-merge_id = []
-union_id=[]
-term_result = []
-scoreQuery = 0.0
-weight_query = []
-similarity = defaultdict(list)
-for i, term in enumerate(terms):
-    term_result.append(db_terms.find_one( {"term" : term} ))
+#search = lmtzr.lemmatize(raw_input("What would you like to search?")).lower()
+#print(search)
+#search = search.lower()
+#search = re.sub(r'[^a-zA-Z]', " ", search)
+#terms = word_tokenize(search)
+def run(terms):
+    terms = terms
+    merge_id = []
+    union_id=[]
+    term_result = []
+    scoreQuery = 0.0
+    weight_query = []
+    similarity = defaultdict(list)
+    for i, term in enumerate(terms):
+        term_result.append(db_terms.find_one( {"term" : term} ))
 
-    if term_result[i] != None:
-        id = []
+        if term_result[i] != None:
+            id = []
+            results = term_result[i]['found in']
+            idf = term_result[i]['idf']
+            for i in results:
+                id.append(i[0])
+            union_id.append(id)
+            weight_query.append(round(term.count(term) /float(len(terms)) * idf,3))
+    print weight_query
+    for i in weight_query:
+        scoreQuery += i ** 2
+    scoreQuery = math.sqrt(scoreQuery)
+    merge_id = intersect(union_id[0], union_id[1])
+
+    for i, term in enumerate(terms):
         results = term_result[i]['found in']
-        idf = term_result[i]['idf']
         for i in results:
-            id.append(i[0])
-        union_id.append(id)
-        weight_query.append(round(term.count(term) /float(len(terms)) * idf,3))
-print weight_query
-for i in weight_query:
-    scoreQuery += i ** 2
-scoreQuery = math.sqrt(scoreQuery)
-merge_id = intersect(union_id[0], union_id[1])
+            if i[0] in merge_id:
 
-for i, term in enumerate(terms):
-    results = term_result[i]['found in']
-    for i in results:
-        if i[0] in merge_id:
-
-            id_list[i[0]].append(i[2])
-for id, posting in id_list.iteritems():
-    score = 0.0
-    for i in posting:
-        score += i ** 2
-    score = math.sqrt(score)
-    score_doc[id].append(score)
+                id_list[i[0]].append(i[2])
+    for id, posting in id_list.iteritems():
+        score = 0.0
+        for i in posting:
+            score += i ** 2
+        score = math.sqrt(score)
+        score_doc[id].append(score)
 
 
-for id in merge_id:
-    weight = id_list[id]
-    dot = dot_product(weight_query,weight)
-    similarity[id] = [dot / scoreQuery * score_doc[id][0]]
+    for id in merge_id:
+        weight = id_list[id]
+        dot = dot_product(weight_query,weight)
+        similarity[id] = [dot / scoreQuery * score_doc[id][0]]
 
-print id_list
-print("")
-print merge_id
-print("")
-print score_doc
-print similarity # sort this dictionary and print out the url
+    pprint (id_list)
+    print("")
+    pprint (merge_id)
+    print("")
+    pprint(dict(score_doc))
+    sorted_results = sorted(similarity.items(), key=operator.itemgetter(1), reverse=True)# sort this dictionary and print out the url
+    pprint(sorted_results)
+    result = []
+    for i in sorted_results[0:10]:
+        result.append(db_bookkeeping.find_one({"bk_path":i[0]}))
+    return result
+
+def run_single_search(search):
+    result = []
+    db_result = db_terms.find_one({"term":search})
+    db_result = sorted(db_result['found in'], key=operator.itemgetter(2))[0:10]
+    print(db_result)
+    for page in db_result:
+        result.append(db_bookkeeping.find_one({"bk_path":page[0]}))
+    return result
 
 
-# results_sorted = sorted(results, key=lambda x:x[2], reverse=True)
-# counter = 0
-# while counter < 10:
-#     # result = results_sorted[counter]
-#     # bk_path= result[0]
-#     # count = result[1]
-#     # tf_idf= result[2]
-#     # print str(counter + 1) + "[" + str(tf_idf) + "]: " + db_bookkeeping.find_one(
-#     #     {
-#     #     'bk_path':bk_path
-#     #     }
-#     # )['url']
-#     # counter += 1
-#     print db_bookkeeping.find_one(
-#         {
-#         'bk_path':merge_id[counter]
-#         }
-#     )['url']
-#     counter +=1
-
-#print(term_result)
