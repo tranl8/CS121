@@ -88,7 +88,7 @@ def run(terms):
 def run_single_search(search):
     result = []
     db_result = db_terms.find_one({"term":search})
-    db_result = sorted(db_result['found in'], key=operator.itemgetter(2))[0:10]
+    db_result = sorted(db_result['found in'], key=operator.itemgetter(2), reverse=True)[0:10]
     print(db_result)
     for page in db_result:
         result.append(db_bookkeeping.find_one({"bk_path":page[0]}))
