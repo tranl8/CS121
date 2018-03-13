@@ -67,7 +67,7 @@ def term_tokenize():
         if (bool(BeautifulSoup(document,"html.parser").find())):
             numdoc.append(1)
             soup = BeautifulSoup(document, 'html.parser')
-            [s.extract() for s in soup(['style', 'script', '[document]', 'head', 'title'])]
+            [s.extract() for s in soup(['style', 'script', '[document]'])]
             visible_text = soup.getText()
 
             print corpus_files[file]
